@@ -1,0 +1,95 @@
+{
+  "name": "fast-map-cache",
+  "version": "1.0.0",
+  "description": "High-performance TypeScript LRU cache (with optional TTL) for Node.js & browsers.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/main.js",
+  "module": "./dist/main.mjs",
+  "types": "./dist/main.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "README_zh-CN.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=14"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/main.mjs",
+      "require": "./dist/main.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "oxlint",
+    "build": "pnpm lint && pnpm type-check && tsdown",
+    "bench": "vitest bench --run",
+    "prepare": "simple-git-hooks install",
+    "run:example": "npx tsx examples/01-basic-example.ts",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "gen-report": "pnpm bench && tsx scripts/generate-performance-report.ts",
+    "changeset": "changeset",
+    "version:packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "keywords": [
+    "cache",
+    "lru",
+    "ttl",
+    "fast",
+    "typescript",
+    "node",
+    "browser",
+    "lru-cache",
+    "ttl-cache",
+    "memory-cache",
+    "in-memory-cache"
+  ],
+  "author": {
+    "name": "crper",
+    "url": "https://github.com/crper"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.5",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "lint-staged": "^16.1.2",
+    "oxlint": "^1.2.0",
+    "pnpm": "^10.12.2",
+    "prettier": "^3.6.0",
+    "simple-git-hooks": "^2.13.0",
+    "tsdown": "^0.12.8",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "commit-msg": "npx --no-install commitlint --edit \"$1\""
+  },
+  "lint-staged": {
+    "*.{js,ts,json,md}": "prettier --write",
+    "*.{js,ts}": [
+      "oxlint",
+      "vitest related --run"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crper/fast-map-cache.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crper/fast-map-cache/issues"
+  },
+  "homepage": "https://github.com/crper/fast-map-cache#readme"
+}
