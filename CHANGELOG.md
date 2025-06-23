@@ -1,5 +1,11 @@
 # fast-map-cache
 
+## 1.0.1
+
+### Patch Changes
+
+- 重新发布：解决 npm 删除包后的 24 小时冷却期问题
+
 ## 1.0.0
 
 ### Major Changes
