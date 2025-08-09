@@ -1,5 +1,13 @@
 # fast-map-cache
 
+## 1.1.0
+
+### Minor Changes
+
+- - docs(readme): clarify TTL semantics (get() does not refresh TTL) and Node.js timer behavior (uses unref); recommend calling destroy() on shutdown
+  - tests(ttl): add autoCleanup with fake timers, destroy() idempotence, TTL stats increments, has() lazy deletion, batch+TTL behaviors
+  - chore: centralize deletion path; ensure TTL/LRU deletion sync via deleteNode() override
+
 ## 1.0.1
 
 ### Patch Changes

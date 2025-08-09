@@ -1,5 +1,5 @@
 // mini-scaffold/tests/index.test.ts
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   CachePresets,
   FastCache,
@@ -125,6 +125,45 @@ describe('FastCache (LRU)', () => {
   })
 })
 
+// 新增：TTL 统计与 has 行为细节
+describe('TTL stats and has() behavior', () => {
+  test('expired get() should increase misses and expired', async () => {
+    const cache = new FastCacheWithTTL<string, number>({ maxSize: 2, ttl: 30 })
+    cache.set('x', 1)
+    await new Promise((r) => setTimeout(r, 40))
+
+    // 第一次读取触发懒删除，计入 misses 与 expired
+    expect(cache.get('x')).toBeUndefined()
+    const stats = cache.getStats()
+    expect(stats.misses).toBe(1)
+    expect(stats.expired).toBe(1)
+    expect(cache.size).toBe(0)
+  })
+
+  test('has() on expired item should delete it and reduce size', async () => {
+    const cache = new FastCacheWithTTL<string, number>({ maxSize: 2, ttl: 20 })
+    cache.set('x', 1)
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(cache.has('x')).toBe(false)
+    expect(cache.size).toBe(0)
+  })
+
+  test('setMany and cleanup should work with TTL', async () => {
+    const cache = new FastCacheWithTTL<string, number>({ maxSize: 5, ttl: 30 })
+    cache.setMany([
+      ['a', 1],
+      ['b', 2],
+    ])
+    expect(cache.size).toBe(2)
+
+    await new Promise((r) => setTimeout(r, 40))
+    const removed = cache.cleanup()
+    expect(removed).toBe(2)
+    expect(cache.size).toBe(0)
+  })
+})
+
 describe('FastCacheWithTTL', () => {
   let cache: FastCacheWithTTL<string, number>
 
@@ -187,6 +226,52 @@ describe('FastCacheWithTTL', () => {
     await new Promise((resolve) => setTimeout(resolve, 150))
 
     expect(cache.has('key1')).toBe(false)
+  })
+})
+
+// 自动清理与销毁相关用例
+describe('Auto cleanup and destroy', () => {
+  test('autoCleanup removes expired items using fake timers', () => {
+    vi.useFakeTimers()
+    // 固定起始时间，便于可预测
+    vi.setSystemTime(new Date(2025, 0, 1, 0, 0, 0))
+
+    const cache = new FastCacheWithTTL<string, number>({
+      maxSize: 3,
+      ttl: 50,
+      autoCleanup: true,
+      cleanupInterval: 30,
+    })
+
+    cache.set('k', 1)
+
+    // 30ms 时执行一次清理，但尚未过期
+    vi.advanceTimersByTime(30)
+    expect(cache.get('k')).toBe(1)
+    expect(cache.size).toBe(1)
+
+    // 60ms 时第二次清理，已过期，应被移除
+    vi.advanceTimersByTime(30)
+    expect(cache.get('k')).toBeUndefined()
+    expect(cache.size).toBe(0)
+
+    cache.destroy()
+    vi.useRealTimers()
+  })
+
+  test('destroy() is idempotent when autoCleanup is enabled', () => {
+    vi.useFakeTimers()
+    const cache = new FastCacheWithTTL<string, number>({ maxSize: 2, ttl: 100, autoCleanup: true })
+    cache.set('a', 1)
+
+    // 多次调用不应抛错
+    cache.destroy()
+    cache.destroy()
+
+    // 计时器已清理，推进计时器不应抛错
+    vi.advanceTimersByTime(500)
+    expect(cache.size).toBe(1)
+    vi.useRealTimers()
   })
 })
 
@@ -254,5 +339,37 @@ describe('Edge cases and error handling', () => {
 
     expect(cache.get('key1')).toBe(3)
     expect(cache.size).toBe(1)
+  })
+})
+
+// 新增：TTL 与 LRU 交互与配置校验
+describe('TTL and eviction integration', () => {
+  test('should not leave TTL dangling nodes after LRU eviction', () => {
+    const cache = new FastCacheWithTTL<string, number>({ maxSize: 2, ttl: 60_000 })
+
+    cache.set('a', 1)
+    cache.set('b', 2)
+    // 触发 LRU 淘汰（应淘汰 a）
+    cache.set('c', 3)
+
+    expect(cache.has('a')).toBe(false)
+    expect(cache.size).toBe(2)
+
+    // 不应有残留 TTL 节点导致 cleanup 误删或异常
+    const removed = cache.cleanup()
+    expect(removed).toBe(0)
+    expect(cache.size).toBe(2)
+  })
+
+  test('should throw for non-positive cleanupInterval when autoCleanup enabled', () => {
+    expect(
+      () =>
+        new FastCacheWithTTL<string, number>({
+          maxSize: 2,
+          ttl: 1000,
+          autoCleanup: true,
+          cleanupInterval: 0,
+        }),
+    ).toThrow('cleanupInterval must be positive')
   })
 })

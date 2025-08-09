@@ -40,7 +40,15 @@ export class FastCacheWithTTL<K extends CacheKey, V> extends FastCache<K, V> {
 
     if (this.autoCleanup && this.ttl > 0) {
       const cleanupInterval = options.cleanupInterval ?? this.ttl
+      if (cleanupInterval <= 0) {
+        throw new Error('cleanupInterval must be positive')
+      }
       this.cleanupTimer = setInterval(() => this.cleanup(), cleanupInterval)
+      // 在 Node.js 环境下，避免定时器阻塞进程退出
+      const anyTimer = this.cleanupTimer as unknown as { unref?: () => void }
+      if (typeof anyTimer.unref === 'function') {
+        anyTimer.unref()
+      }
     }
   }
 
@@ -183,6 +191,14 @@ export class FastCacheWithTTL<K extends CacheKey, V> extends FastCache<K, V> {
       clearInterval(this.cleanupTimer)
       this.cleanupTimer = undefined
     }
+  }
+
+  /**
+   * 覆写统一删除入口：先维护 TTL 链表，再调用父类删除 LRU/Map。
+   */
+  protected override deleteNode(node: CacheNode<K, V>): void {
+    this._removeFromTimeList(node)
+    super.deleteNode(node)
   }
 
   private isExpired(node: CacheNode<K, V>, now?: number): boolean {

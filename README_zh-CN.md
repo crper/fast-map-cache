@@ -80,11 +80,13 @@ setTimeout(() => {
 }, 6000)
 ```
 
+> 提示：TTL 以最近一次 `set()` 的时间为基准；`get()` 不会刷新 TTL（非“访问续期”）。
+
 ### ❗ Node.js 用户重要提示
 
-在 Node.js 环境下使用 `FastCacheWithTTL` 并开启 `autoCleanup: true` 选项时，系统会使用 `setInterval` 定时清理过期缓存。这个定时器会阻止 Node.js 进程正常退出。
+在 Node.js 下使用 `autoCleanup: true` 时，内部会使用 `setInterval` 做周期清理；当环境支持时定时器会调用 `unref()`，因此不会单独阻止进程退出。
 
-**您必须在程序退出前手动调用 `destroy()` 方法来清除该定时器。**
+**仍然建议在应用退出前调用 `destroy()` 主动释放资源**，可避免长生命周期任务或测试环境中的潜在挂起。
 
 ```typescript
 const cache = createCacheWithTTL({ maxSize: 100, autoCleanup: true, ttl: 60000 })

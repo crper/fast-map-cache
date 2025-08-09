@@ -1,6 +1,6 @@
 {
   "name": "fast-map-cache",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "High-performance TypeScript LRU cache (with optional TTL) for Node.js & browsers.",
   "publishConfig": {
     "access": "public"

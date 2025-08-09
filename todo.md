@@ -1,2 +1,0 @@
-- chore: setup project
-- feat: add release workflow

@@ -63,7 +63,7 @@ export class FastCache<K extends CacheKey, V> implements IFastCache<K, V> {
 
     // 检查容量
     if (this.cache.size >= this.maxSize) {
-      // 删除最久未使用的节点
+      // 删除最久未使用的节点（集中到 deleteNode，便于子类覆写）
       this.removeTail()
     }
 
@@ -79,8 +79,7 @@ export class FastCache<K extends CacheKey, V> implements IFastCache<K, V> {
       return false
     }
 
-    this.cache.delete(key)
-    this.removeNode(node)
+    this.deleteNode(node)
     return true
   }
 
@@ -158,11 +157,20 @@ export class FastCache<K extends CacheKey, V> implements IFastCache<K, V> {
     this.addToHead(node)
   }
 
+  /**
+   * 统一删除入口：删除 Map 记录并从 LRU 链表移除节点。
+   * 子类（如 TTL 版本）可覆写该方法以保证多链表同步删除。
+   */
+  protected deleteNode(node: CacheNode<K, V>): void {
+    this.cache.delete(node.key)
+    this.removeNode(node)
+  }
+
   protected removeTail(): void {
     const lastNode = this.tail.prev
     if (lastNode && lastNode !== this.head) {
-      this.cache.delete(lastNode.key)
-      this.removeNode(lastNode)
+      // 通过统一删除入口，便于子类维持多链表一致性
+      this.deleteNode(lastNode)
     }
   }
 }

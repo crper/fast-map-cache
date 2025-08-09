@@ -78,11 +78,13 @@ setTimeout(() => {
 }, 6000)
 ```
 
+> Note: TTL is based on the timestamp of the last `set()` operation. A `get()` does not refresh TTL (i.e., it is not access-renewal).
+
 ### ❗ Important Note for Node.js Users
 
-When using `FastCacheWithTTL` with the `autoCleanup: true` option in a Node.js environment, a `setInterval` is used to periodically clean up expired items. This timer will prevent the Node.js process from exiting gracefully on its own.
+When using `FastCacheWithTTL` with the `autoCleanup: true` option in Node.js, an internal `setInterval` is used for periodic cleanup. The timer is created with `unref()` when available, so it will not keep the process alive on its own.
 
-**You must manually call the `destroy()` method before your application exits to clear the timer.**
+**It is still recommended to call `destroy()` before your application exits** to proactively clear resources and avoid potential hangs in long-running tasks or test environments.
 
 ```typescript
 const cache = createCacheWithTTL({ maxSize: 100, autoCleanup: true, ttl: 60000 })
